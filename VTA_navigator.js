@@ -1,9 +1,9 @@
 const { Builder, By, until } = require("selenium-webdriver");
-const assert = require("assert");
 
-async function findRoute(rNum, direction, from, to) {
+async function findRoute(rNum, direction) {
     // Open the browser
     let driver = await new Builder().forBrowser("chrome").build();
+    // Saves the result of the function
     let url = "";
     try {
         // Navigate to the VTA routes webpage
@@ -21,11 +21,8 @@ async function findRoute(rNum, direction, from, to) {
         url = await driver.getCurrentUrl();   
     }
     finally {
-        // Close the browser
-        await driver.quit();
-        // Test: console.log(url);
+        // Close the browser and return the url with the desired route
+        //await driver.quit();
         return url;
     }
 }
-
-findRoute(process.argv[2], process.argv[3]);
