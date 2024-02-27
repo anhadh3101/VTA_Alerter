@@ -1,6 +1,6 @@
 const { Builder, By, until } = require("selenium-webdriver");
 
-findRoute = async function(rNum, direction) {
+findRoute = async function(rNum, station) {
     // Open the browser
     let driver = await new Builder().forBrowser("chrome").build();
     // Saves the result of the function
@@ -9,15 +9,19 @@ findRoute = async function(rNum, direction) {
         // Navigate to the VTA routes webpage
         await driver.get("https://www.vta.org/go/routes");
         // Fill in the route name
-        const x = await driver.findElement(By.id("edit-route-search"));
-        x.sendKeys(rNum);
+        const routeSearch = await driver.findElement(By.id("edit-route-search"));
+        await routeSearch.sendKeys(rNum);
         // Click the apply button
-        await driver.findElement(By.id("edit-submit-routes")).click();
+        await routeSearch.click();
         // So far, the  user has navigated to a page that shows various routes based on keyword
         // Click the desired route
         await driver.findElement(By.xpath(`//*[contains(text(), '${rNum}')]`)).click();
-        // Click in the direction and during what time in the week the user wants to go
-        await driver.findElement(By.xpath(`//*[contains(text(), '${direction}')]`)).click(); 
+        // Choose the departing station from the options available
+        const selectElement = await driver.findElement(By.id("edit-origin"));
+        await selectElement.click();
+        await selectElement.findElement(By.xpath(`//*[contains(text(), '${station}')]`)).click();
+        await driver.findElement(By.id("edit-submit")).click();
+        // Save the url
         url = await driver.getCurrentUrl();  
     }
     finally {
