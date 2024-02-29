@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 from twilio.rest import Client
 import pyodbc
 import keys
+import schedule
+import time
 
 """Gets the URL of the specified path.
 
@@ -43,8 +45,14 @@ def get_schedule(departure_times, start, end):
     ideal_times = []
     # Converting a list item to time object and making a list of ideal times.
     for i in range(len(departure_times)):
-        date_time = datetime.strptime(departure_times[i], "%I:%M %p")
-        time = datetime.strftime(date_time, "%H:%M")
+        # Check for discrepancies on the website
+        try:
+            today_date = datetime.now().date() 
+            depart_time = datetime.strptime(departure_times[i], "%I:%M %p").time()
+            depart_at = datetime.combine(today_date, depart_time)
+        except:
+            continue
+        time = datetime.strftime(depart_at, "%H:%M")
         # Adding specific times to the list
         if start <= time <= end:
             ideal_times.append(time)
@@ -54,11 +62,13 @@ def get_schedule(departure_times, start, end):
 
 def push_notification(departure_time, send_to):
     client = Client(keys.account_sid, keys.auth_token)
-    time = datetime.strptime(departure_time, "%H:%M")
-    send_when = time - timedelta(minutes=10)
-    time = datetime.strftime(time, "%H:%M")
+    today_date = datetime.now().date() 
+    depart_time = datetime.strptime(departure_time, "%H:%M").time()
+    departs_at = datetime.combine(today_date, depart_time)
+    send_when = departs_at + timedelta(hours=2, minutes=50)
+    time = datetime.strftime(departs_at, "%H:%M")
     message = client.messages.create(
-        from_=keys.twilio_phone_number,
+        from_=keys.msg_service_sid,
         to=send_to,
         body="Your transit is leaving at " + time + ".",
         schedule_type="fixed",
@@ -67,7 +77,6 @@ def push_notification(departure_time, send_to):
     
 def main():
     # Connect to the MS SQL database using pyodbc
-    
     cnxn = pyodbc.connect('DRIVER={ODBC Driver 18 for SQL Server};\
                       SERVER='+keys.server+';\
                       DATABASE='+keys.database+';\
@@ -91,19 +100,26 @@ def main():
             if row[3] in item:
                 departure_times = item.loc[:, row[3]]
                 break
-        
+
         # Filter the list of desired times to get a list of ideal times
-        start = datetime.strptime(row[1], "%I:%M %p") 
+        today_date = datetime.now().date()
+        start_time = datetime.strptime(row[1], "%I:%M %p").time()
+        start = datetime.combine(today_date, start_time)
         end = start + timedelta(minutes=30) # Only need the buses within 30 minutes of set time
         start = datetime.strftime(start, "%H:%M") # Convert to military format 
         end = datetime.strftime(end, "%H:%M")
         ideal_times = get_schedule(departure_times, start, end) # List of ideal times
-        print(ideal_times)
+
         # Push notifications to the users phone
         for t in ideal_times:
             push_notification(t, row[4])
 
         row = cursor.fetchone()
+    
+def do_this():
+    print("Hi")
+schedule.every().day.at("00:15").do(main)
 
-if __name__ == "__main__":
-    main()
+while 1:
+    schedule.run_pending()
+    time.sleep(1) 
