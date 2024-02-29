@@ -116,8 +116,6 @@ def main():
 
         row = cursor.fetchone()
     
-def do_this():
-    print("Hi")
 schedule.every().day.at("00:15").do(main)
 
 while 1:
